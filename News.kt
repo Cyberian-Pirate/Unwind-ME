@@ -5,6 +5,7 @@ import android.util.Xml
 import org.json.JSONArray
 import org.xmlpull.v1.XmlPullParser
 import java.io.File
+import java.io.StringReader
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -58,7 +59,7 @@ fun parseFeedTitles(xml: String, max: Int): List<String> {
     try {
         val p = Xml.newPullParser()
         p.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
-        p.setInput(xml.byteInputStream(Charsets.UTF_8))
+        p.setInput(StringReader(xml))
         var inItem = false
         var titleBuf: StringBuilder? = null
         var event = p.eventType

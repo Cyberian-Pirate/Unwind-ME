@@ -34,7 +34,7 @@ fun bannerText(name: String): String =
 // keeps its leading zero ("05:48 AM"), afternoon times do not ("1:00 PM").
 fun format12h(hhmm: String): String {
     val parts = hhmm.split(":")
-    if (parts.size != 2) return hhmm
+    if (parts.size < 2) return hhmm
     val h = parts[0].toIntOrNull() ?: return hhmm
     val m = parts[1]
     return when {
@@ -74,7 +74,9 @@ fun parsePrayerDay(json: String, today: Calendar): PrayerDay? {
             cal.time = date
             if (!sameDay(cal, today)) continue
             val keys = listOf("fajr", "dhuhr", "asr", "maghrib", "isha")
-            val times = keys.map { o.optString(it) }
+            // JAKIM returns "HH:mm:ss"; keep "HH:mm" so format12h and the
+            // banner check both get the shape they expect.
+            val times = keys.map { o.optString(it).take(5) }
             if (times.any { it.isBlank() }) return null
             return PrayerDay(times, times.map { format12h(it) }, nextPrayerIndex(times, today))
         }

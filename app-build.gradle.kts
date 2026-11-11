@@ -68,7 +68,11 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     // The DreamService drives its own Compose lifecycle owner (a dream
     // has no Activity), so the lifecycle classes must be on the classpath.
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx")
+    // Pinned explicitly: ViewTreeLifecycleOwner lives in lifecycle-runtime,
+    // and the bare artifact name alone did not put it on the compile
+    // classpath in the CI build.
+    implementation("androidx.lifecycle:lifecycle-runtime:2.8.3")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.3")
     // Lets Android pre-compile the Compose code on first run, which removes most start-up stutter
     implementation("androidx.profileinstaller:profileinstaller:1.3.1")
 }

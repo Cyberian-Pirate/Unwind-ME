@@ -64,6 +64,7 @@ class PrayerBannerService : Service() {
     override fun onCreate() {
         super.onCreate()
         startForeground(1, notification())
+        android.util.Log.d("UnwindBanner", "service started")
         running = true
         checkThread = Thread {
             while (running) {
@@ -172,6 +173,9 @@ class PrayerBannerService : Service() {
             bannerScroll = scroll
             mainHandler.post(scroll)
             mainHandler.postDelayed({ hideBanner() }, 30_000)
+            // Log tag is UnwindBanner (not Glass TV's TvHome.PrayerBanner),
+            // so a future logcat check can tell which app's banner fired.
+            android.util.Log.i("UnwindBanner", "banner shown for $name")
         } catch (e: Exception) {
             hideBanner()
         }
@@ -183,6 +187,7 @@ class PrayerBannerService : Service() {
         val bar = bannerView ?: return
         bannerView = null
         bannerText = null
+        android.util.Log.i("UnwindBanner", "banner hidden")
         try {
             val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
             wm.removeView(bar)

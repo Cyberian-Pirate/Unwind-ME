@@ -43,8 +43,12 @@ atau app kedua.
   waktu solat JAKIM dengan solat seterusnya Bold dalam warna accent.
   Semua widget beralih beberapa piksel ke arah rawak setiap 1 minit
   untuk elak screen burn-in. Font Inter dibundel dalam app
-  (res/font/inter-*.ttf). Pilih dalam Settings → Device Preferences →
-  Screen saver selepas install.
+  (res/font/inter_*.ttf). UI dream guna View biasa, bukan Compose —
+  dream tiada Activity, jadi ComposeView perlukan lifecycle owner
+  yang perlu dipasang sendiri, dan ViewTreeLifecycleOwner tidak
+  dapat di-resolve dalam build CI walaupun lifecycle-runtime
+  dipin secara eksplisit (3 build gagal). Pilih dalam Settings →
+  Device Preferences → Screen saver selepas install.
 - Kad dan ticker guna glass dan warna wallpaper Unwind sendiri, jadi
   tukar wallpaper atau glass style dalam Preferences akan tukar warna
   mereka secara automatik. Tiada setting warna berasingan.

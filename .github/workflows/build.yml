@@ -1,0 +1,61 @@
+name: Build APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Arrange files
+        run: |
+          J=app/src/main/java/com/unwind/launcher
+          R=app/src/main/res
+          mkdir -p $J $R/values $R/drawable $R/drawable-nodpi
+          for f in *.kt; do if [ -f "$f" ]; then mv "$f" $J/; fi; done
+          for f in wp_*.jpg; do if [ -f "$f" ]; then mv "$f" $R/drawable-nodpi/; fi; done
+          for f in unwind_icon.png unwind_banner.png; do if [ -f "$f" ]; then mv "$f" $R/drawable-nodpi/; fi; done
+          if [ -f AndroidManifest.xml ]; then mv AndroidManifest.xml app/src/main/; fi
+          if [ -f app-build.gradle.kts ]; then mv app-build.gradle.kts app/build.gradle.kts; fi
+          if [ -f proguard-rules.pro ]; then mv proguard-rules.pro app/proguard-rules.pro; fi
+          if [ -f strings.xml ]; then mv strings.xml $R/values/; fi
+          if [ -f themes.xml ]; then mv themes.xml $R/values/; fi
+          ls -R app | head -80
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.7
+      - name: Restore signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.UNWIND_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/unwind.jks"
+            echo "UNWIND_KEYSTORE_PATH=$RUNNER_TEMP/unwind.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning::No signing key secret found. This APK will NOT install over an older one."
+          fi
+      - name: Build debug APK
+        run: gradle assembleDebug --no-daemon
+        env:
+          UNWIND_KEYSTORE_PASSWORD: ${{ secrets.UNWIND_KEYSTORE_PASSWORD }}
+          UNWIND_KEY_ALIAS: ${{ secrets.UNWIND_KEY_ALIAS }}
+          UNWIND_KEY_PASSWORD: ${{ secrets.UNWIND_KEY_PASSWORD }}
+      - name: Build release APK (smoother)
+        run: gradle assembleRelease --no-daemon
+        continue-on-error: true
+        env:
+          UNWIND_KEYSTORE_PASSWORD: ${{ secrets.UNWIND_KEYSTORE_PASSWORD }}
+          UNWIND_KEY_ALIAS: ${{ secrets.UNWIND_KEY_ALIAS }}
+          UNWIND_KEY_PASSWORD: ${{ secrets.UNWIND_KEY_PASSWORD }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unwind-launcher-apk
+          path: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: warn

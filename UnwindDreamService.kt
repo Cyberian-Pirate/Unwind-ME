@@ -153,7 +153,7 @@ class UnwindDreamService : DreamService() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
             )
             setBackgroundColor(Color.BLACK)
-            alpha = 0.55f
+            alpha = 0.68f
         })
 
         content = LinearLayout(this).apply {
@@ -163,14 +163,14 @@ class UnwindDreamService : DreamService() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
             )
-            setPadding(0, dp(34), 0, 0)
+            setPadding(0, dp(20), 0, 0)
         }
         dateView = text(15f, R.font.inter_regular, Color.argb(165, 255, 255, 255))
         hijriView = text(12f, R.font.inter_regular, Color.argb(120, 255, 255, 255))
         content.addView(dateView)
         content.addView(spacer(4))
         content.addView(hijriView)
-        content.addView(spacer(30))
+        content.addView(spacer(16))
 
         // Hero clock: thin digits white, AM/PM in the accent, smaller.
         // baselineAligned lines the two sizes up on the same baseline.
@@ -179,8 +179,15 @@ class UnwindDreamService : DreamService() {
             gravity = Gravity.CENTER_HORIZONTAL
             isBaselineAligned = true
         }
-        clockDigits = text(130f, R.font.inter_light, Color.argb(185, 255, 255, 255))
-        clockAmpm = text(42f, R.font.inter_light, accentArgb)
+        clockDigits = text(130f, R.font.inter_light, Color.argb(185, 255, 255, 255)).apply {
+            // Trim the font's extra top/bottom padding: at 130sp the
+            // TextView was 372px tall, which pushed the prayer times
+            // off the bottom of the screen. Glyphs stay 130sp.
+            includeFontPadding = false
+        }
+        clockAmpm = text(42f, R.font.inter_light, accentArgb).apply {
+            includeFontPadding = false
+        }
         clockRow.addView(clockDigits)
         clockRow.addView(View(this).apply {
             layoutParams = LinearLayout.LayoutParams(dp(9), 1)
@@ -197,9 +204,12 @@ class UnwindDreamService : DreamService() {
         content.addView(spacer(12))
 
         // Weather: icon + temperature + condition + place, one quiet row.
+        // The row is full-width (vertical parent gives MATCH_PARENT by
+        // default), so its gravity must center the children, or the
+        // whole row sits on the left.
         val weatherRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+            gravity = Gravity.CENTER
         }
         weatherGlyph = WeatherGlyphView(this).apply {
             layoutParams = LinearLayout.LayoutParams(dp(30), dp(22))
@@ -211,14 +221,14 @@ class UnwindDreamService : DreamService() {
         })
         weatherRow.addView(weatherView)
         content.addView(weatherRow)
-        content.addView(spacer(22))
+        content.addView(spacer(14))
 
         calendarBox = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
         }
         content.addView(calendarBox)
-        content.addView(spacer(18))
+        content.addView(spacer(12))
         content.addView(text(9f, R.font.inter_medium, Color.argb(115, 255, 255, 255)).apply {
             text = "WAKTU SOLAT"
         })
@@ -255,7 +265,10 @@ class UnwindDreamService : DreamService() {
         val startDow = first.get(Calendar.DAY_OF_WEEK) // 1 = Sunday
         val daysInMonth = now.getActualMaximum(Calendar.DAY_OF_MONTH)
         val today = now.get(Calendar.DAY_OF_MONTH)
-        val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_HORIZONTAL
+        }
         for (h in listOf("SU", "MO", "TU", "WE", "TH", "FR", "SA")) {
             header.addView(text(11f, R.font.inter_medium, Color.argb(120, 255, 255, 255)).apply {
                 text = h
@@ -266,7 +279,10 @@ class UnwindDreamService : DreamService() {
         calendarBox.addView(spacer(6))
         val cells = List(startDow - 1) { null as Int? } + (1..daysInMonth).toList()
         for (row in cells.chunked(7)) {
-            val rowView = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            val rowView = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
             for (day in row) {
                 val cell = text(
                     12f,

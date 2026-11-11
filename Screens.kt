@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -81,7 +82,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
@@ -305,6 +305,16 @@ fun NewsTicker(headlines: List<String>, modifier: Modifier) {
     val period = remember(single) {
         if (single.isBlank()) 0f else measurer.measure("$single  \u2022  ", textStyle).size.width.toFloat()
     }
+    // The doubled string's full width. A plain Text inside the narrow box
+    // is measured AT_MOST the box width, so the long string was truncated
+    // to one screenful: it slid out in seconds and the bar sat empty for
+    // the rest of the cycle, exactly the fault Glass TV's NewsTicker
+    // documents. The scrolling Text is therefore given its full measured
+    // width explicitly (see below), and moved with graphicsLayer
+    // translationX, the Compose equivalent of Glass TV's setTranslationX.
+    val doubledW = remember(doubled) {
+        measurer.measure(doubled, textStyle).size.width.toFloat()
+    }
     var holderW by remember { mutableStateOf(0) }
     val density = LocalDensity.current
     val fits = singleW <= holderW - with(density) { 16.dp.toPx() }
@@ -358,7 +368,8 @@ fun NewsTicker(headlines: List<String>, modifier: Modifier) {
                     maxLines = 1,
                     softWrap = false,
                     modifier = Modifier.align(Alignment.CenterStart)
-                        .offset { IntOffset(scrollX.roundToInt(), 0) },
+                        .requiredWidth(with(density) { doubledW.toDp() })
+                        .graphicsLayer { translationX = scrollX },
                 )
             }
         }

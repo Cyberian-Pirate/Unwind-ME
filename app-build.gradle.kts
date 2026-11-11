@@ -66,6 +66,9 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.activity:activity-compose:1.9.0")
     implementation("androidx.core:core-ktx:1.13.1")
+    // The DreamService drives its own Compose lifecycle owner (a dream
+    // has no Activity), so the lifecycle classes must be on the classpath.
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx")
     // Lets Android pre-compile the Compose code on first run, which removes most start-up stutter
     implementation("androidx.profileinstaller:profileinstaller:1.3.1")
 }

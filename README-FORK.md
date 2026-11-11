@@ -35,6 +35,16 @@ atau app kedua.
   muncul, jadi tukar wallpaper atau glass akan tukar warna banner juga.
   Log tag UnwindBanner ("banner shown for X" / "banner hidden"), supaya
   logcat boleh bezakan banner fork dengan banner Glass TV.
+- Screensaver (DreamService, design v5 yang diluluskan): gambar Bing
+  harian yang sama seperti Home, di-blur dan digelapkan (frosted, tidak
+  sharp), semua di tengah — tarikh + Hijri, jam besar nipis (Inter
+  Light), AM/PM huruf besar warna accent, cuaca Seri Kembangan
+  (Open-Meteo), kalendar bulan semasa (hari ini warna accent), dan 5
+  waktu solat JAKIM dengan solat seterusnya Bold dalam warna accent.
+  Semua widget beralih beberapa piksel ke arah rawak setiap 1 minit
+  untuk elak screen burn-in. Font Inter dibundel dalam app
+  (res/font/inter-*.ttf). Pilih dalam Settings → Device Preferences →
+  Screen saver selepas install.
 - Kad dan ticker guna glass dan warna wallpaper Unwind sendiri, jadi
   tukar wallpaper atau glass style dalam Preferences akan tukar warna
   mereka secara automatik. Tiada setting warna berasingan.

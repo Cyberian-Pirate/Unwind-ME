@@ -11,8 +11,9 @@ jobs:
         run: |
           J=app/src/main/java/com/unwind/launcher
           R=app/src/main/res
-          mkdir -p $J $R/values $R/drawable $R/drawable-nodpi
+          mkdir -p $J $R/values $R/drawable $R/drawable-nodpi $R/font
           for f in *.kt; do if [ -f "$f" ]; then mv "$f" $J/; fi; done
+          for f in inter-*.ttf; do if [ -f "$f" ]; then mv "$f" $R/font/; fi; done
           for f in wp_*.jpg; do if [ -f "$f" ]; then mv "$f" $R/drawable-nodpi/; fi; done
           for f in unwind_icon.png unwind_banner.png; do if [ -f "$f" ]; then mv "$f" $R/drawable-nodpi/; fi; done
           if [ -f AndroidManifest.xml ]; then mv AndroidManifest.xml app/src/main/; fi

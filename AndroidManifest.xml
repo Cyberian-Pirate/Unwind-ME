@@ -73,6 +73,20 @@
             android:name=".PrayerBannerService"
             android:exported="false" />
 
+        <!-- Screensaver (DreamService): the v5 design — Bing daily photo
+             frosted + dim, centered clock, calendar, weather, prayer times.
+             The system binds it, so it must be exported with the
+             BIND_DREAM_SERVICE permission. Pick it in Settings → Device
+             Preferences → Screen saver. -->
+        <service
+            android:name=".UnwindDreamService"
+            android:exported="true"
+            android:permission="android.permission.BIND_DREAM_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.dreams.DreamService" />
+            </intent-filter>
+        </service>
+
         <receiver
             android:name=".BootReceiver"
             android:exported="true">

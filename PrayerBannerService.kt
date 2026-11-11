@@ -21,6 +21,7 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.TextView
+import androidx.compose.ui.graphics.toArgb
 import java.util.Calendar
 
 // The one part of the prayer feature that still needs an overlay: the

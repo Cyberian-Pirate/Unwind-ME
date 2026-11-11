@@ -10,6 +10,11 @@ atau app kedua.
 - Kad waktu solat di Home, kanan atas, sejajar dengan top pill. Waktu
   dari JAKIM zon WLY01 Putrajaya, 5 waktu fardhu sahaja, solat
   seterusnya ditanda dengan pill warna accent wallpaper. Tiada ikon jam.
+  Waktu dalam format 12 jam tanpa sifar depan ("5:48 AM", "1:00 PM").
+  Sebelah PUTRAJAYA, dijajar kanan, ada tarikh Hijrah rasmi JAKIM
+  ("1 Jamadilakhir 1448H", bold, gaya teks sama dengan lokasi) dari
+  medan "hijri" dalam API e-solat yang sama; disembunyi bila data
+  tiada, supaya tarikh yang salah tidak pernah dipapar.
 - Ticker berita di bawah baris app. Label "BREAKING NEWS  |  " kekal
   statik di kiri (bold), hanya headline sahaja yang bergerak
   kanan-ke-kiri pada 35 dp/s dan loop tanpa putus. 20 headline dari

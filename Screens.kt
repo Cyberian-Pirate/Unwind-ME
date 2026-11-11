@@ -81,6 +81,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -257,17 +258,33 @@ fun PrayerCard(prayer: PrayerDay?, modifier: Modifier) {
         )
         Spacer(Modifier.height(6.dp))
         Row(
-            Modifier.padding(horizontal = 15.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 15.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Icon(
-                Icons.Rounded.Place,
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.8f),
-                modifier = Modifier.size(13.dp),
-            )
-            Spacer(Modifier.width(6.dp))
-            Text("PUTRAJAYA", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Rounded.Place,
+                    contentDescription = null,
+                    tint = Color.White.copy(alpha = 0.8f),
+                    modifier = Modifier.size(13.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text("PUTRAJAYA", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
+            }
+            // Hijri date from JAKIM's own API, same style as the location
+            // text (11sp, white 0.8), bold, pushed to the right edge.
+            // Hidden when the data is missing, so a bad fetch never shows
+            // a wrong date.
+            prayer?.hijri?.let { hijri ->
+                Text(
+                    hijri,
+                    color = Color.White.copy(alpha = 0.8f),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.End,
+                )
+            }
         }
         Spacer(Modifier.height(8.dp))
         PRAYER_NAMES.forEachIndexed { i, name ->

@@ -20,18 +20,22 @@ val PRAYER_NAMES = listOf("Subuh", "Zohor", "Asar", "Maghrib", "Isyak")
 
 // One day of prayer times. times24 holds "HH:mm" for the banner check,
 // display holds the 12-hour text shown on the card, nextIndex is the
-// next prayer that has not started yet, or -1 when all five have passed.
+// next prayer that has not started yet, or -1 when all five have passed,
+// hijri is the official JAKIM Hijri date ("1 Jamadilakhir 1448H") or
+// null when the API did not supply one.
 class PrayerDay(
     val times24: List<String>,
     val display: List<String>,
     val nextIndex: Int,
+    val hijri: String?,
 )
 
 fun bannerText(name: String): String =
     "Sekarang sudah masuk waktu solat fardhu $name. Solatlah sebelum anda disolatkan!"
 
-// 12-hour text in the style of the approved v6 mockup: the morning time
-// keeps its leading zero ("05:48 AM"), afternoon times do not ("1:00 PM").
+// 12-hour text with no leading zero on any hour ("5:48 AM", "1:00 PM"),
+// as Azuan asked: Subuh used to keep its zero ("05:48 AM") from the v6
+// mockup, and now matches the other times.
 fun format12h(hhmm: String): String {
     val parts = hhmm.split(":")
     if (parts.size < 2) return hhmm
@@ -39,10 +43,31 @@ fun format12h(hhmm: String): String {
     val m = parts[1]
     return when {
         h == 0 -> "12:$m AM"
-        h < 12 -> "%02d:%s AM".format(h, m)
+        h < 12 -> "$h:$m AM"
         h == 12 -> "12:$m PM"
         else -> "${h - 12}:$m PM"
     }
+}
+
+// JAKIM's own Hijri month names, as used on e-solat.
+private val HIJRI_MONTHS = listOf(
+    "Muharram", "Safar", "Rabiulawal", "Rabiulakhir", "Jamadilawal", "Jamadilakhir",
+    "Rejab", "Syaaban", "Ramadan", "Syawal", "Zulkaedah", "Zulhijjah",
+)
+
+// The API's "hijri" field ("1448-06-01") into display text
+// ("1 Jamadilakhir 1448H"). Null when the field is absent or malformed,
+// so the card hides the date instead of showing a wrong one. This is
+// JAKIM's official date, not a computed conversion, so it cannot drift
+// a day from the Malaysian announcement the way Umm al-Qura math can.
+fun formatHijri(hijri: String): String? {
+    val parts = hijri.split("-")
+    if (parts.size != 3) return null
+    val y = parts[0].toIntOrNull() ?: return null
+    val m = parts[1].toIntOrNull() ?: return null
+    val d = parts[2].toIntOrNull() ?: return null
+    if (y <= 0 || m !in 1..12 || d !in 1..31) return null
+    return "$d ${HIJRI_MONTHS[m - 1]} ${y}H"
 }
 
 fun nextPrayerIndex(times24: List<String>, now: Calendar): Int {
@@ -78,7 +103,7 @@ fun parsePrayerDay(json: String, today: Calendar): PrayerDay? {
             // banner check both get the shape they expect.
             val times = keys.map { o.optString(it).take(5) }
             if (times.any { it.isBlank() }) return null
-            return PrayerDay(times, times.map { format12h(it) }, nextPrayerIndex(times, today))
+            return PrayerDay(times, times.map { format12h(it) }, nextPrayerIndex(times, today), formatHijri(o.optString("hijri")))
         }
         null
     } catch (e: Exception) {

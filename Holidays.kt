@@ -41,7 +41,7 @@ fun formatDateLine(now: Date, holiday: String?): String {
 fun parseHolidaysIcs(ics: String): Map<String, String> {
     val unfolded = ics.replace("\r\n", "\n").replace("\n ", "").replace("\n\t", "")
     val out = LinkedHashMap<String, String>()
-    val datePat = Regex("^DTSTART[^:]:(\\d{8})")
+    val datePat = Regex("^DTSTART[^:]*:(\\d{8})")
     var inEvent = false
     var date: String? = null
     var summary: String? = null

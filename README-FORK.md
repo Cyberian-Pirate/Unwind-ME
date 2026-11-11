@@ -29,6 +29,10 @@ atau app kedua.
 - Banner solat 30 saat atas sebarang app bila masuk waktu fardhu, sekali
   setiap solat setiap hari, 5 fardhu sahaja. Teks: "Sekarang sudah masuk
   waktu solat fardhu _____. Solatlah sebelum anda disolatkan!"
+  Bar 350dp di tengah atas (tidak bertindih dengan top pill), dengan
+  rupa glass Unwind: warna tint wallpaper semasa dan gaya glass semasa
+  (Normal/Frost/Liquid) dibaca dari setting Unwind setiap kali banner
+  muncul, jadi tukar wallpaper atau glass akan tukar warna banner juga.
   Log tag UnwindBanner ("banner shown for X" / "banner hidden"), supaya
   logcat boleh bezakan banner fork dengan banner Glass TV.
 - Kad dan ticker guna glass dan warna wallpaper Unwind sendiri, jadi

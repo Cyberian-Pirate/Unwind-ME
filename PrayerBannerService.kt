@@ -114,20 +114,83 @@ class PrayerBannerService : Service() {
         if (prefs.getBoolean(firedKey, false)) return
         prefs.edit().putBoolean(firedKey, true).apply()
         if (!Settings.canDrawOverlays(this)) return
-        mainHandler.post { showBanner(PRAYER_NAMES[idx]) }
+        // The banner's look comes from Unwind's own settings, read fresh
+        // here so a wallpaper or glass change in Preferences recolors
+        // the next banner with no restart. Stock wallpapers need no I/O
+        // (the table holds their colors); Bing and Custom go through the
+        // same loader Home uses, with the stock table as fallback.
+        val settings = loadSettings(this)
+        val wp = if (settings.wallSource == WallSource.Stock) {
+            WALLPAPERS.getOrElse(settings.wallpaper) { WALLPAPERS[0] }
+        } else {
+            try {
+                loadWallpaper(this, settings)?.wp
+            } catch (e: Exception) {
+                null
+            } ?: WALLPAPERS.getOrElse(settings.wallpaper) { WALLPAPERS[0] }
+        }
+        mainHandler.post { showBanner(PRAYER_NAMES[idx], wp.tint, settings.glass) }
     }
 
-    private fun showBanner(name: String) {
+    // The banner is a plain View, so it cannot use the Compose glass
+    // modifier; this rebuilds the same look from the same inputs (the
+    // current wallpaper's tint, the current glass style). Normal: tint
+    // gradient 0.34 -> 0.55 with a white top sheen and a thin rim.
+    // Frost: milky white 0.22 over tint 0.22, stronger rim. Liquid:
+    // faint tint 0.12 with a specular top sheen and no outline, like
+    // the lens bars on Home. The old hardcoded dark bar (#80000000) is
+    // gone; the banner now changes color with the wallpaper, like every
+    // other Unwind bar.
+    private fun bannerBackground(
+        tint: androidx.compose.ui.graphics.Color,
+        style: GlassStyle,
+    ): android.graphics.drawable.Drawable {
+        val r = dp(20f).toFloat()
+        fun grad(top: Int, bottom: Int): GradientDrawable =
+            GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(top, bottom)).apply {
+                cornerRadius = r
+            }
+        fun solid(color: Int): GradientDrawable =
+            GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                setColor(color)
+                cornerRadius = r
+            }
+        fun white(a: Float): Int = android.graphics.Color.argb((a * 255).toInt(), 255, 255, 255)
+        val layers: Array<GradientDrawable> = when (style) {
+            GlassStyle.Normal -> arrayOf(
+                grad(tint.copy(alpha = 0.34f).toArgb(), tint.copy(alpha = 0.55f).toArgb()),
+                grad(white(0.12f), android.graphics.Color.TRANSPARENT),
+            )
+            GlassStyle.Frost -> arrayOf(
+                solid(white(0.22f)),
+                solid(tint.copy(alpha = 0.22f).toArgb()),
+                grad(white(0.16f), android.graphics.Color.TRANSPARENT),
+            )
+            GlassStyle.Liquid -> arrayOf(
+                solid(tint.copy(alpha = 0.12f).toArgb()),
+                grad(white(0.25f), android.graphics.Color.TRANSPARENT),
+            )
+        }
+        val strokeA = when (style) {
+            GlassStyle.Normal -> 0.20f
+            GlassStyle.Frost -> 0.30f
+            GlassStyle.Liquid -> 0f
+        }
+        if (strokeA > 0f) layers.last().setStroke(dp(1f), white(strokeA))
+        return android.graphics.drawable.LayerDrawable(layers)
+    }
+
+    private fun showBanner(
+        name: String,
+        tint: androidx.compose.ui.graphics.Color,
+        style: GlassStyle,
+    ) {
         if (bannerView != null) return
         if (!Settings.canDrawOverlays(this)) return
         try {
             val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-            val bg = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dp(20f).toFloat()
-                setColor(Color.parseColor("#80000000"))
-                setStroke(dp(1f), Color.parseColor("#2EFFFFFF"))
-            }
+            val bg = bannerBackground(tint, style)
             val bar = FrameLayout(this).apply { background = bg }
             val text = TextView(this).apply {
                 setText(bannerText(name))
@@ -144,7 +207,7 @@ class PrayerBannerService : Service() {
             }
             bar.addView(text)
             val lp = WindowManager.LayoutParams(
-                dp(700f),
+                dp(350f),
                 dp(34f),
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
@@ -158,8 +221,11 @@ class PrayerBannerService : Service() {
             bannerText = text
             // Scroll right to left at about 60 dp/s (2 px per 16 ms step
             // on this TV's density 2 screen), then hide after 30 seconds.
+            // The bar is 350dp wide and centered: on this 960dp-wide
+            // screen it spans 305-655dp, clear of the top-right pill
+            // (which starts around 665dp) and of the Home title.
             val textW = text.paint.measureText(text.text.toString())
-            val barW = dp(700f).toFloat()
+            val barW = dp(350f).toFloat()
             var x = barW
             val scroll = object : Runnable {
                 override fun run() {

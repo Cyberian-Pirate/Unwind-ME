@@ -14,7 +14,8 @@ atau app kedua.
   Sebelah PUTRAJAYA, dijajar kanan, ada tarikh Hijrah rasmi JAKIM
   ("1 Jamadilakhir 1448H", bold, gaya teks sama dengan lokasi) dari
   medan "hijri" dalam API e-solat yang sama; disembunyi bila data
-  tiada, supaya tarikh yang salah tidak pernah dipapar.
+  tiada, supaya tarikh yang salah tidak pernah dipapar. Ada garis
+  pemisah nipis di bawah baris lokasi, seperti dalam gambar rujukan.
 - Ticker berita di bawah baris app. Label "BREAKING NEWS  |  " kekal
   statik di kiri (bold), hanya headline sahaja yang bergerak
   kanan-ke-kiri pada 35 dp/s dan loop tanpa putus. 20 headline dari

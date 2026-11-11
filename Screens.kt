@@ -286,6 +286,13 @@ fun PrayerCard(prayer: PrayerDay?, modifier: Modifier) {
                 )
             }
         }
+        // Divider under the location row, as in Azuan's reference photo:
+        // a thin line inset to the text edges, same 15dp padding.
+        Spacer(Modifier.height(8.dp))
+        Box(
+            Modifier.fillMaxWidth().padding(horizontal = 15.dp).height(1.dp)
+                .background(Color.White.copy(alpha = 0.2f)),
+        )
         Spacer(Modifier.height(8.dp))
         PRAYER_NAMES.forEachIndexed { i, name ->
             val isNext = i == next

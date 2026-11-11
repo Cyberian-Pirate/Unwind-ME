@@ -309,19 +309,22 @@ fun NewsTicker(headlines: List<String>, modifier: Modifier) {
     val density = LocalDensity.current
     val fits = singleW <= holderW - with(density) { 16.dp.toPx() }
     val speedPx = with(density) { 60.dp.toPx() }
-    val duration = if (period > 0f && speedPx > 0f) (period / speedPx * 1000).toInt().coerceAtLeast(1000) else 10_000
-    val infinite = rememberInfiniteTransition(label = "ticker")
-    // The doubled text repeats every period, so sliding it by exactly one
-    // period and starting over shows the same glyphs: the loop has no gap.
-    val offset by infinite.animateFloat(
-        initialValue = 0f,
-        targetValue = -period,
-        animationSpec = infiniteRepeatable(
-            animation = tween(duration, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "tickerScroll",
-    )
+    // Scroll driven by a main-thread step every 16 ms, like Glass TV's
+    // ticker: the ValueAnimator-based infiniteTransition never moved the
+    // text on this TV (label showed, headlines stayed invisible), while
+    // Glass TV's Handler step has scrolled reliably for weeks. The offset
+    // wraps by exactly one period, so the loop has no gap.
+    var scrollX by remember { mutableStateOf(0f) }
+    LaunchedEffect(single, period, speedPx) {
+        scrollX = 0f
+        android.util.Log.d("UnwindNews", "ticker singleLen=${single.length} singleW=$singleW period=$period holderW=$holderW")
+        if (period <= 0f || speedPx <= 0f) return@LaunchedEffect
+        while (true) {
+            delay(16)
+            scrollX -= speedPx * 0.016f
+            if (scrollX <= -period) scrollX += period
+        }
+    }
     // Nothing to show until the first fetch lands. The return sits after
     // every remember call above, so the hook order never changes.
     if (single.isBlank()) return
@@ -355,7 +358,7 @@ fun NewsTicker(headlines: List<String>, modifier: Modifier) {
                     maxLines = 1,
                     softWrap = false,
                     modifier = Modifier.align(Alignment.CenterStart)
-                        .offset { IntOffset(offset.roundToInt(), 0) },
+                        .offset { IntOffset(scrollX.roundToInt(), 0) },
                 )
             }
         }

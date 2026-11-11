@@ -133,6 +133,7 @@ fun loadNews(ctx: Context): List<String> {
             }
         }
     }
+    android.util.Log.d("UnwindNews", "loadNews fresh=${fresh.size}")
     if (fresh.isNotEmpty()) {
         saveNewsCache(ctx, fresh)
         return fresh

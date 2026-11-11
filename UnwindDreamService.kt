@@ -47,7 +47,7 @@ import kotlin.random.Random
 class UnwindDreamService : DreamService() {
 
     private val handler = Handler(Looper.getMainLooper())
-    private lateinit var density: Float
+    private var density: Float = 1f
     private lateinit var content: LinearLayout
     private lateinit var bgImage: ImageView
     private lateinit var dateView: TextView

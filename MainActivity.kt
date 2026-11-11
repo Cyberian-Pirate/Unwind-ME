@@ -52,6 +52,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Date
 
 // Pinned to Home the first time it runs (only apps that are installed show up).
 private val DEFAULT_FAVS = listOf(
@@ -148,6 +149,13 @@ fun LauncherApp(tick: Int, homeTick: Int) {
     // then refresh from the network on their own schedule.
     var prayerToday by remember { mutableStateOf<PrayerDay?>(null) }
     var headlines by remember { mutableStateOf<List<String>>(emptyList()) }
+    // Malaysian holidays beside the Home date, from Google's public
+    // "Holidays in Malaysia" calendar; same cache-first pattern.
+    var holidays by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    // The date line beside the greeting, rebuilt every clock tick so it
+    // stays right across midnight: "November 11, 2026 • Wednesday",
+    // plus " | Christmas" on a holiday day.
+    val dateLine = remember(tick, holidays) { formatDateLine(Date(), holidays[todayKey()]) }
     var moveApp by remember { mutableStateOf<AppEntry?>(null) }
     val moveFocus = remember { FocusRequester() }
 
@@ -211,6 +219,14 @@ fun LauncherApp(tick: Int, homeTick: Int) {
         while (true) {
             headlines = withContext(Dispatchers.IO) { loadNews(ctx) }
             delay(10 * 60 * 1000L)
+        }
+    }
+    // Holidays: load once, then re-check every hour. The day's holiday
+    // only changes at midnight, and the cache itself refetches weekly.
+    LaunchedEffect(Unit) {
+        while (true) {
+            holidays = withContext(Dispatchers.IO) { loadHolidays(ctx) }
+            delay(60 * 60 * 1000L)
         }
     }
     LaunchedEffect(homeTick) {
@@ -390,6 +406,7 @@ fun LauncherApp(tick: Int, homeTick: Int) {
                         nav = nav,
                         prayer = prayerToday,
                         headlines = headlines,
+                        dateLine = dateLine,
                         onLaunch = { launchApp(ctx, it) },
                         onAdd = { screen = Screen.Edit },
                     )
@@ -431,6 +448,7 @@ fun LauncherApp(tick: Int, homeTick: Int) {
                         part = greetPart,
                         initial = settings.greetings[greetPart] ?: DEFAULT_GREETINGS.getValue(greetPart),
                         nav = nav,
+                        dateLine = dateLine,
                         onSave = { g ->
                             updateSettings(settings.copy(greetings = settings.greetings + (greetPart to g)))
                             screen = Screen.Settings

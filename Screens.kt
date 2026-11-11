@@ -112,6 +112,7 @@ fun HomeContent(
     nav: Nav,
     prayer: PrayerDay?,
     headlines: List<String>,
+    dateLine: String = "",
     onLaunch: (AppEntry) -> Unit,
     onAdd: () -> Unit,
 ) {
@@ -151,7 +152,7 @@ fun HomeContent(
         )
 
         Column(Modifier.fillMaxSize().padding(start = 163.dp, top = topPad, bottom = bottomPad)) {
-            GreetingText(greeting)
+            GreetingText(greeting, dateLine = dateLine)
             if (!stacked) {
                 Spacer(Modifier.weight(1f))
                 // Endless row. With the dock on, the glass bar stays put and the apps slide across it.

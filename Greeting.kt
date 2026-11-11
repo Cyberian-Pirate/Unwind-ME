@@ -41,12 +41,23 @@ private const val MAX_BIG = 20
  * A blank line is simply left out.
  */
 @Composable
-fun GreetingText(g: Greeting, scale: Float = 1f) {
+fun GreetingText(g: Greeting, scale: Float = 1f, dateLine: String = "") {
     val ui = LocalUi.current
     val shadow = TextStyle(shadow = Shadow(Color(0x66000000), blurRadius = 14f))
     Column {
-        if (g.top.isNotBlank()) {
-            Text(g.top, color = Color.White.copy(alpha = 0.92f), fontSize = (15f * scale).sp, style = shadow)
+        // The date (and holiday, when there is one) rides on the
+        // greeting's own small line, in the exact same Text: same 15sp,
+        // same white, same shadow, so its colour and font can never
+        // drift apart from the greeting's. "Good morning | November 11,
+        // 2026 • Wednesday | Christmas", or just the date when there is
+        // no holiday that day.
+        val topLine = when {
+            g.top.isNotBlank() && dateLine.isNotBlank() -> "${g.top} | $dateLine"
+            g.top.isNotBlank() -> g.top
+            else -> dateLine
+        }
+        if (topLine.isNotBlank()) {
+            Text(topLine, color = Color.White.copy(alpha = 0.92f), fontSize = (15f * scale).sp, style = shadow)
             Spacer(Modifier.height((6f * scale).dp))
         }
         if (g.line1.isNotBlank()) {
@@ -116,6 +127,7 @@ fun GreetingEditor(
     part: DayPart,
     initial: Greeting,
     nav: Nav,
+    dateLine: String = "",
     onSave: (Greeting) -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -202,7 +214,7 @@ fun GreetingEditor(
                 Box(
                     Modifier.width(446.dp).height(104.dp).glass(RoundedCornerShape(22.dp)).padding(horizontal = 18.dp, vertical = 12.dp),
                     contentAlignment = Alignment.CenterStart,
-                ) { GreetingText(Greeting(small, big1, big2), 0.45f) }
+                ) { GreetingText(Greeting(small, big1, big2), 0.45f, dateLine) }
                 Spacer(Modifier.height(12.dp))
                 val rows = listOf("abcdefghijk", "lmnopqrstuv", "wxyz'.,!?-&", "1234567890:")
                 rows.forEachIndexed { ri, row ->

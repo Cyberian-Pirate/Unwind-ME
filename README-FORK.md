@@ -12,8 +12,14 @@ atau app kedua.
   seterusnya ditanda dengan pill warna accent wallpaper. Tiada ikon jam.
 - Ticker berita di bawah baris app. Label "BREAKING NEWS  |  " kekal
   statik di kiri (bold), hanya headline sahaja yang bergerak
-  kanan-ke-kiri pada 60 dp/s dan loop tanpa putus. 20 headline dari
+  kanan-ke-kiri pada 35 dp/s dan loop tanpa putus. 20 headline dari
   Berita Harian, Utusan, CNN (melalui Google News) dan Al Jazeera.
+- Tarikh dan cuti di sebelah teks greeting: "Good morning |
+  November 11, 2026 • Wednesday", ditambah " | Christmas" bila hari
+  itu cuti atau perayaan di Malaysia (dari kalendar awam Google
+  "Holidays in Malaysia", nama seperti yang kalendar beri). Tarikh
+  guna Text yang sama dengan greeting, jadi warna dan font sama
+  dengan greeting. Tiada cuti = tarikh sahaja.
 - Banner solat 30 saat atas sebarang app bila masuk waktu fardhu, sekali
   setiap solat setiap hari, 5 fardhu sahaja. Teks: "Sekarang sudah masuk
   waktu solat fardhu _____. Solatlah sebelum anda disolatkan!"
@@ -60,6 +66,8 @@ Build jalan di GitHub Actions melalui `.github/workflows/build.yml`:
 - `Prayer.kt`: fetch dan cache waktu solat JAKIM, format 12 jam,
   kira solat seterusnya.
 - `News.kt`: fetch dan cache 4 sumber RSS, parse dengan XmlPullParser.
+- `Holidays.kt`: fetch dan cache kalendar cuti Malaysia (ICS awam
+  Google), format tarikh English "MMMM d, yyyy • EEEE" + " | cuti".
 - `PrayerBannerService.kt`: foreground service dan banner overlay
   30 saat.
 - `BootReceiver.kt`: mula servis banner selepas reboot.

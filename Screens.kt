@@ -59,6 +59,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -318,21 +319,29 @@ fun NewsTicker(headlines: List<String>, modifier: Modifier) {
     var holderW by remember { mutableStateOf(0) }
     val density = LocalDensity.current
     val fits = singleW <= holderW - with(density) { 16.dp.toPx() }
-    val speedPx = with(density) { 60.dp.toPx() }
-    // Scroll driven by a main-thread step every 16 ms, like Glass TV's
-    // ticker: the ValueAnimator-based infiniteTransition never moved the
-    // text on this TV (label showed, headlines stayed invisible), while
-    // Glass TV's Handler step has scrolled reliably for weeks. The offset
-    // wraps by exactly one period, so the loop has no gap.
+    val speedPx = with(density) { 35.dp.toPx() }
+    // Scroll driven by the display's own frame clock (withFrameNanos),
+    // not a 16 ms timer: delay(16) fires off-vsync, so steps landed
+    // between frames and the motion stuttered on this TV. Each frame
+    // moves the text by speed * real frame time (dt clamped to 0.1 s),
+    // so it stays smooth even if a frame is late. Speed 35 dp/s, down
+    // from 60, at Azuan's request: easier to read, and fewer pixels per
+    // frame. The offset wraps by exactly one period, so the loop has
+    // no gap.
     var scrollX by remember { mutableStateOf(0f) }
     LaunchedEffect(single, period, speedPx) {
         scrollX = 0f
         android.util.Log.d("UnwindNews", "ticker singleLen=${single.length} singleW=$singleW period=$period holderW=$holderW")
         if (period <= 0f || speedPx <= 0f) return@LaunchedEffect
+        var last = -1L
         while (true) {
-            delay(16)
-            scrollX -= speedPx * 0.016f
-            if (scrollX <= -period) scrollX += period
+            withFrameNanos { now ->
+                if (last < 0L) { last = now; return@withFrameNanos }
+                val dt = ((now - last) / 1_000_000_000f).coerceIn(0f, 0.1f)
+                last = now
+                scrollX -= speedPx * dt
+                if (scrollX <= -period) scrollX += period
+            }
         }
     }
     // Nothing to show until the first fetch lands. The return sits after

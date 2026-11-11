@@ -71,6 +71,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // The 30-second prayer banner lives in this same app as a foreground service.
+        runCatching {
+            val i = Intent(this, PrayerBannerService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(i)
+            } else {
+                startService(i)
+            }
+        }
         // Pressing Home while Unwind is already open should bring you back to the Home page.
         addOnNewIntentListener { intent ->
             if (intent.hasCategory(Intent.CATEGORY_HOME)) homeTick++
@@ -135,6 +144,10 @@ fun LauncherApp(tick: Int, homeTick: Int) {
     var greetPart by remember { mutableStateOf(DayPart.Morning) }
     var folderMap by remember { mutableStateOf(loadFolderMap(prefs)) }
     var openFolder by remember { mutableStateOf<String?>(null) }
+    // Prayer card and news ticker data for Home. Both load from cache first,
+    // then refresh from the network on their own schedule.
+    var prayerToday by remember { mutableStateOf<PrayerDay?>(null) }
+    var headlines by remember { mutableStateOf<List<String>>(emptyList()) }
     var moveApp by remember { mutableStateOf<AppEntry?>(null) }
     val moveFocus = remember { FocusRequester() }
 
@@ -183,6 +196,23 @@ fun LauncherApp(tick: Int, homeTick: Int) {
         }
 
     LaunchedEffect(tick) { apps = withContext(Dispatchers.Default) { loadApps(ctx) } }
+    // Prayer times: load once, then re-check every half hour (the cache
+    // itself only refetches from JAKIM when it is a day old).
+    LaunchedEffect(Unit) {
+        prayerToday = withContext(Dispatchers.IO) { loadPrayer(ctx) }
+        while (true) {
+            delay(30 * 60 * 1000L)
+            prayerToday = withContext(Dispatchers.IO) { loadPrayer(ctx) }
+        }
+    }
+    // News: load once, then refresh every 10 minutes. A failed fetch keeps
+    // the old headlines, so the ticker never goes empty on a bad network day.
+    LaunchedEffect(Unit) {
+        while (true) {
+            headlines = withContext(Dispatchers.IO) { loadNews(ctx) }
+            delay(10 * 60 * 1000L)
+        }
+    }
     LaunchedEffect(homeTick) {
         if (homeTick > 0) {
             screen = Screen.Home
@@ -358,6 +388,8 @@ fun LauncherApp(tick: Int, homeTick: Int) {
                         favApps = favApps,
                         focusKick = focusKick,
                         nav = nav,
+                        prayer = prayerToday,
+                        headlines = headlines,
                         onLaunch = { launchApp(ctx, it) },
                         onAdd = { screen = Screen.Edit },
                     )

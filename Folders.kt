@@ -193,7 +193,7 @@ fun AppFolders(
                         onClick = { onLaunch(app) },
                         forceName = true,
                         onLongPress = { onMove(app) },
-                    ) { d -> AppGlyph(app, d) }
+                    ) { d, focused -> AppGlyph(app, d, focused) }
                 }
             }
         }

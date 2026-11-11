@@ -1,7 +1,15 @@
 package com.unwind.launcher
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -37,6 +45,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Place
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -50,6 +59,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.onSizeChanged
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.focus.onFocusChanged
@@ -61,17 +72,21 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.util.Calendar
+import kotlin.math.roundToInt
 
 // ---------- Home ----------
 
@@ -79,7 +94,7 @@ import java.util.Calendar
 private fun HomeTile(app: AppEntry?, modifier: Modifier, onLaunch: (AppEntry) -> Unit, onAdd: () -> Unit) {
     val ui = LocalUi.current
     if (app != null) {
-        Tile(app.label, modifier, onClick = { onLaunch(app) }) { d -> AppGlyph(app, d) }
+        Tile(app.label, modifier, onClick = { onLaunch(app) }) { d, focused -> AppGlyph(app, d, focused) }
     } else {
         Tile("Add apps", modifier, onClick = onAdd) {
             Icon(Icons.Rounded.Add, contentDescription = null, tint = ui.wp.accent, modifier = Modifier.size(34.dp))
@@ -88,7 +103,15 @@ private fun HomeTile(app: AppEntry?, modifier: Modifier, onLaunch: (AppEntry) ->
 }
 
 @Composable
-fun HomeContent(favApps: List<AppEntry>, focusKick: Int, nav: Nav, onLaunch: (AppEntry) -> Unit, onAdd: () -> Unit) {
+fun HomeContent(
+    favApps: List<AppEntry>,
+    focusKick: Int,
+    nav: Nav,
+    prayer: PrayerDay?,
+    headlines: List<String>,
+    onLaunch: (AppEntry) -> Unit,
+    onAdd: () -> Unit,
+) {
     val ui = LocalUi.current
     val hour = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }
     val part = dayPartFor(hour)
@@ -116,8 +139,11 @@ fun HomeContent(favApps: List<AppEntry>, focusKick: Int, nav: Nav, onLaunch: (Ap
         val topPad by animateDpAsState(if (tall) 104.dp else 140.dp, label = "homeTop")
         // Dock height setting: how far the row sits above the bottom edge
         val lift = 78 - ui.settings.dockPos.bottom
+        // The news ticker sits below the app row, so the row is lifted by
+        // the ticker height (21 dp) plus its gap (12 dp) when it is shown.
+        val tickerPad = if (ui.settings.showTicker) 33.dp else 0.dp
         val bottomPad by animateDpAsState(
-            if (tall) maxOf(8, 28 - lift / 2).dp else ui.settings.dockPos.bottom.dp,
+            if (tall) maxOf(8, 28 - lift / 2).dp + tickerPad else ui.settings.dockPos.bottom.dp + tickerPad,
             label = "homeBottom",
         )
 
@@ -185,6 +211,152 @@ fun HomeContent(favApps: List<AppEntry>, focusKick: Int, nav: Nav, onLaunch: (Ap
                 }
             }
         }
+
+        // Prayer card and news ticker are part of Home itself, so they only
+        // ever appear on this screen. Their glass and colors come from the
+        // same wallpaper and glass style as the rest of Home, so changing
+        // either one in Preferences recolors them with no extra setting.
+        if (ui.settings.showPrayer) {
+            PrayerCard(
+                prayer,
+                Modifier.align(Alignment.TopEnd).padding(top = 97.dp, end = 24.dp),
+            )
+        }
+        if (ui.settings.showTicker) {
+            NewsTicker(
+                headlines,
+                Modifier.align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(start = 19.dp, end = 19.dp, bottom = 12.dp)
+                    .height(21.dp),
+            )
+        }
+    }
+}
+
+// ---------- Prayer card and news ticker ----------
+
+@Composable
+fun PrayerCard(prayer: PrayerDay?, modifier: Modifier) {
+    val ui = LocalUi.current
+    val times = prayer?.display ?: List(5) { "--:--" }
+    val next = prayer?.nextIndex ?: -1
+    Column(
+        modifier.width(262.dp).glass(RoundedCornerShape(20.dp)).padding(vertical = 12.dp),
+    ) {
+        Text(
+            "WAKTU SOLAT",
+            color = Color.White,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(horizontal = 15.dp),
+        )
+        Spacer(Modifier.height(6.dp))
+        Row(
+            Modifier.padding(horizontal = 15.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Rounded.Place,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.8f),
+                modifier = Modifier.size(13.dp),
+            )
+            Spacer(Modifier.width(6.dp))
+            Text("PUTRAJAYA", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
+        }
+        Spacer(Modifier.height(8.dp))
+        PRAYER_NAMES.forEachIndexed { i, name ->
+            val isNext = i == next
+            Box(Modifier.fillMaxWidth().padding(horizontal = 6.dp)) {
+                Row(
+                    Modifier.fillMaxWidth()
+                        .then(if (isNext) Modifier.background(ui.wp.accent, RoundedCornerShape(10.dp)) else Modifier)
+                        .padding(horizontal = 9.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        name,
+                        color = if (isNext) ui.wp.dark else Color.White,
+                        fontSize = 14.sp,
+                    )
+                    Text(
+                        times[i],
+                        color = if (isNext) ui.wp.dark else Color.White,
+                        fontSize = 14.sp,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun NewsTicker(headlines: List<String>, modifier: Modifier) {
+    val single = remember(headlines) { headlines.joinToString("  \u2022  ") }
+    val doubled = remember(single) { "$single  \u2022  $single" }
+    val textStyle = TextStyle(fontSize = 11.sp, color = Color.White)
+    val measurer = rememberTextMeasurer()
+    val singleW = remember(single) {
+        if (single.isBlank()) 0f else measurer.measure(single, textStyle).size.width.toFloat()
+    }
+    val period = remember(single) {
+        if (single.isBlank()) 0f else measurer.measure("$single  \u2022  ", textStyle).size.width.toFloat()
+    }
+    var holderW by remember { mutableStateOf(0) }
+    val density = LocalDensity.current
+    val fits = singleW <= holderW - with(density) { 16.dp.toPx() }
+    val speedPx = with(density) { 60.dp.toPx() }
+    val duration = if (period > 0f && speedPx > 0f) (period / speedPx * 1000).toInt().coerceAtLeast(1000) else 10_000
+    val infinite = rememberInfiniteTransition(label = "ticker")
+    // The doubled text repeats every period, so sliding it by exactly one
+    // period and starting over shows the same glyphs: the loop has no gap.
+    val offset by infinite.animateFloat(
+        initialValue = 0f,
+        targetValue = -period,
+        animationSpec = infiniteRepeatable(
+            animation = tween(duration, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "tickerScroll",
+    )
+    // Nothing to show until the first fetch lands. The return sits after
+    // every remember call above, so the hook order never changes.
+    if (single.isBlank()) return
+    Row(
+        modifier.glass(RoundedCornerShape(10.dp)).padding(start = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            "BREAKING NEWS  |  ",
+            color = Color.White,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+        )
+        Box(
+            Modifier.weight(1f).fillMaxHeight().clipToBounds()
+                .onSizeChanged { holderW = it.width },
+        ) {
+            if (fits) {
+                Text(
+                    single,
+                    style = textStyle,
+                    maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            } else {
+                Text(
+                    doubled,
+                    style = textStyle,
+                    maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier.align(Alignment.CenterStart)
+                        .offset { IntOffset(offset.roundToInt(), 0) },
+                )
+            }
+        }
     }
 }
 
@@ -229,7 +401,7 @@ fun AppGrid(
                     onClick = { onClick(app) },
                     highlight = isFav,
                     forceName = true,
-                ) { d -> AppGlyph(app, d) }
+                ) { d, focused -> AppGlyph(app, d, focused) }
             }
         }
     }
@@ -320,7 +492,7 @@ fun SearchScreen(apps: List<AppEntry>, focusKick: Int, nav: Nav, onLaunch: (AppE
                     contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp),
                 ) {
                     itemsIndexed(results, key = { _, a -> a.pkg }) { _, app ->
-                        Tile(app.label, Modifier.dpad(up = nav.pill), onClick = { onLaunch(app) }, forceName = true) { d -> AppGlyph(app, d) }
+                        Tile(app.label, Modifier.dpad(up = nav.pill), onClick = { onLaunch(app) }, forceName = true) { d, focused -> AppGlyph(app, d, focused) }
                     }
                 }
             }
@@ -696,6 +868,28 @@ fun SettingsScreen(
         SectionTitle("App names", "Show the name under each icon on Home")
         ToggleCard(if (settings.showNames) "Names on" else "Names off", settings.showNames, toRail) {
             onChange(settings.copy(showNames = !settings.showNames))
+        }
+        Spacer(Modifier.height(24.dp))
+
+        // Prayer times and news ticker
+        SectionTitle("Waktu solat", "Prayer times for Putrajaya and the breaking news ticker on Home")
+        ToggleCard(if (settings.showPrayer) "Prayer card on" else "Prayer card off", settings.showPrayer, toRail) {
+            onChange(settings.copy(showPrayer = !settings.showPrayer))
+        }
+        Spacer(Modifier.height(14.dp))
+        ToggleCard(if (settings.showTicker) "News ticker on" else "News ticker off", settings.showTicker, toRail) {
+            onChange(settings.copy(showTicker = !settings.showTicker))
+        }
+        if (!Settings.canDrawOverlays(ctx)) {
+            Spacer(Modifier.height(14.dp))
+            ActionCard("Benarkan banner solat", toRail, 240.dp) {
+                ctx.startActivity(
+                    Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:" + ctx.packageName),
+                    ),
+                )
+            }
         }
         Spacer(Modifier.height(24.dp))
 

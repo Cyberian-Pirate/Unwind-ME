@@ -197,7 +197,7 @@ fun Tile(
     onFocus: () -> Unit = {},
     forceName: Boolean = false,
     onLongPress: (() -> Unit)? = null,
-    content: @Composable BoxScope.(Dp) -> Unit,
+    content: @Composable BoxScope.(Dp, Boolean) -> Unit,
 ) {
     val ui = LocalUi.current
     var focused by remember { mutableStateOf(false) }
@@ -252,7 +252,7 @@ fun Tile(
         Box(
             Modifier.size(d).glass(ui.settings.shape.toShape(), focused),
             contentAlignment = Alignment.Center,
-        ) { content(this, d) }
+        ) { content(this, d, focused) }
         if (ui.settings.showNames || forceName) {
             Spacer(Modifier.height(8.dp))
             Text(
@@ -281,31 +281,16 @@ private fun duotone(light: Color, dark: Color): ColorFilter {
  * isolated, the icon is shown as a small two-tone chip so every app still matches the theme.
  */
 @Composable
-fun BoxScope.AppGlyph(app: AppEntry, d: Dp) {
+fun BoxScope.AppGlyph(app: AppEntry, d: Dp, focused: Boolean = false) {
     val ui = LocalUi.current
     val mask = app.mask
     val themed = ui.settings.iconStyle == IconStyle.Themed
+    // Themed tiles stay single-color until focused, then show the app's
+    // own full-color icon, like Glass TV's pill mode. Original style
+    // always shows the full-color icon.
+    val showOriginal = !themed || focused
     when {
-        themed && mask != null -> Image(
-            mask,
-            contentDescription = null,
-            modifier = Modifier.size(d * 0.58f),
-            contentScale = ContentScale.Fit,
-            colorFilter = ColorFilter.tint(ui.wp.accent),
-            filterQuality = FilterQuality.High,
-        )
-        themed -> {
-            val filter = remember(ui.wp.accent, ui.wp.dark) { duotone(ui.wp.accent, ui.wp.dark) }
-            Image(
-                app.icon,
-                contentDescription = null,
-                modifier = Modifier.size(d * 0.58f).clip(RoundedCornerShape(percent = 22)),
-                contentScale = ContentScale.Fit,
-                colorFilter = filter,
-                filterQuality = FilterQuality.High,
-            )
-        }
-        else -> {
+        showOriginal -> {
             if (app.bg.alpha > 0f) {
                 Box(Modifier.fillMaxSize().clip(ui.settings.shape.toShape()).background(app.bg))
             }
@@ -314,6 +299,25 @@ fun BoxScope.AppGlyph(app: AppEntry, d: Dp) {
                 contentDescription = null,
                 modifier = Modifier.size(d * 0.62f),
                 contentScale = ContentScale.Fit,
+                filterQuality = FilterQuality.High,
+            )
+        }
+        mask != null -> Image(
+            mask,
+            contentDescription = null,
+            modifier = Modifier.size(d * 0.58f),
+            contentScale = ContentScale.Fit,
+            colorFilter = ColorFilter.tint(ui.wp.accent),
+            filterQuality = FilterQuality.High,
+        )
+        else -> {
+            val filter = remember(ui.wp.accent, ui.wp.dark) { duotone(ui.wp.accent, ui.wp.dark) }
+            Image(
+                app.icon,
+                contentDescription = null,
+                modifier = Modifier.size(d * 0.58f).clip(RoundedCornerShape(percent = 22)),
+                contentScale = ContentScale.Fit,
+                colorFilter = filter,
                 filterQuality = FilterQuality.High,
             )
         }

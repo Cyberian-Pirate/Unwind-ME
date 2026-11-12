@@ -201,8 +201,17 @@ class PrayerBannerService : Service() {
                 setSingleLine(true)
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(16f), 0, dp(16f), 0)
+                // WRAP_CONTENT inside the 350dp bar is measured AT_MOST
+                // the bar width, so only the first ~40 chars of the
+                // sentence are ever laid out and the tail can never
+                // scroll in (same class of bug as the ticker vc104
+                // fix: on this TV it cut off at "M" of Maghrib).
+                // Give the view its full measured text width so the
+                // whole sentence scrolls through the bar; the bar
+                // clips it to its own bounds.
+                val fullW = (paint.measureText(text.toString()) + dp(32f)).toInt()
                 layoutParams = FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    fullW,
                     ViewGroup.LayoutParams.MATCH_PARENT,
                 )
             }

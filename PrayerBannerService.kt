@@ -25,7 +25,7 @@ import androidx.compose.ui.graphics.toArgb
 import java.util.Calendar
 
 // The one part of the prayer feature that still needs an overlay: the
-// 30-second banner has to appear over YouTube and other apps, and only
+// 60-second banner has to appear over YouTube and other apps, and only
 // an overlay window can do that. It lives inside this same app, not a
 // second app. Unwind is the Home app, so MainActivity.onCreate also
 // starts this service when the TV boots; BootReceiver is only a backup.
@@ -230,7 +230,11 @@ class PrayerBannerService : Service() {
             bannerView = bar
             bannerText = text
             // Scroll right to left at about 60 dp/s (2 px per 16 ms step
-            // on this TV's density 2 screen), then hide after 30 seconds.
+            // on this TV's density 2 screen), then hide after 60 seconds.
+            // 30 seconds was not enough: the full sentence takes ~20 s
+            // to cross the 350dp bar, so one slow pass got cut off
+            // before the tail ("...disolatkan!") scrolled through
+            // (Azuan, Isyak 12 Nov). 60 s allows two full passes.
             // The bar is 350dp wide and centered: on this 960dp-wide
             // screen it spans 305-655dp, clear of the top-right pill
             // (which starts around 665dp) and of the Home title.
@@ -248,7 +252,7 @@ class PrayerBannerService : Service() {
             }
             bannerScroll = scroll
             mainHandler.post(scroll)
-            mainHandler.postDelayed({ hideBanner() }, 30_000)
+            mainHandler.postDelayed({ hideBanner() }, 60_000)
             // Log tag is UnwindBanner (not Glass TV's TvHome.PrayerBanner),
             // so a future logcat check can tell which app's banner fired.
             android.util.Log.i("UnwindBanner", "banner shown for $name")
